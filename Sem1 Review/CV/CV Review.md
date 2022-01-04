@@ -2,6 +2,8 @@
 
 矩阵计算器：https://matrix.reshish.com/multiplication.php
 
+科学计算器：https://www.desmos.com/scientific?lang=zh-CN
+
 # Week1 Introduction
 
 ## 1.1 Ill-posed and Well-posed
@@ -260,8 +262,6 @@ V1 RFs Orientation：
 - Complex Cells：对位置更invariance，所以常用作edge and bar detectors with some tolerance to location
 - Hyper Complex Cells：不仅能回应特定方向，还能回应特定长度的
 
-
-
 ## 4.3 Gabor Functions
 
 Energy Model
@@ -269,8 +269,6 @@ Energy Model
 ## 4.4 Non-Classical RFs
 
 - Classical Receptive Field（cRF）= the region
-
-
 
 ## 4.5 Gestalt Laws
 
@@ -319,6 +317,8 @@ Border ownership refers to the fact that the boundary between two regions in an 
    3. no match =>0
 
 ## 5.2 Region-based
+
+具体请看tutorial5 answer
 
 ### 5.2.1 Region Growing
 
@@ -376,8 +376,6 @@ Energy = Internal energy + External energy
 
 - Internal energy is a function of the shape of the contour, it is reduced if the curve is short and smooth.
 - External energy is a function of the image features near the contour, it is reduced if the intensity gradient is high.
-
-
 
 # Week6 Mid-Level Correspondence
 
@@ -447,3 +445,233 @@ SIFT流程
 RANSAC流程
 
 利弊
+
+# Week7 Mid-Level Stero & Depth
+
+## 7.1 Stereo Camera
+
+Depth information can be recovered using 2 images
+
+### 7.1.1 Coplanar Camera(Simple case)
+
+在相机共面的情况下，disparity等于某像素在左右两个相机之差 $d = x_L - x_R$
+
+$depth = f\frac{baseline}{disparity}$
+
+通过公式可以看出，disparity与depth成反比，即距离像面越近的点，在左右相机中的视差越大，反之亦然。我们根据两张图片的disparity就可以计算出depth map。但是如何得到disparity呢？通过计算两张图中的correspondence位置，来获取disparity。所以how to solve stereo correspondence problem成了关键问题。
+
+通过极平面来找correspondence。通过几何约束将搜索范围缩小到对应的极线上。
+
+Stereo Constraints on Correspondence：
+
+- Epipolar constraints：通过几何约束将搜索范围缩小到对应的极线上
+- Maximum disparity：因为物体距离相机的距离要远远大于baseline的长度，如果相机距离物体太近，就没法拍到有共同 部分的照片，也就找不到corresponding points：fails for points closer to cameras than Zmin.
+- Continuity
+- Uniqueness
+- Ordering
+
+在相机共面的情况下，corresponding points位于两张图片的极线上（极线共面；）
+
+### 7.1.2 Non-Coplanar Camera(Complex case)
+
+在相机不共面的情况下，disparity等于某像素在左右两个相机角度之差 $d = \alpha_L -\alpha_R$
+
+如果d大于0，则表示outside of the horopter(落在horopter上的点视差都为0)；反之亦然
+
+<img src="/Users/kevin/Library/Application Support/typora-user-images/image-20220103184141305.png" alt="image-20220103184141305" style="zoom:30%;" />
+
+**The steps of Stereo Reconstruction or how to find depth?**
+
+1. Calibration(intrinsic extrinsic parameters)
+
+2. Rectification(use Epipole constraints to find correspondence points in
+
+   1D space)
+
+3. Calculate the disparity(to find Disparity map use similar triangles in
+
+   $$𝑍=𝑓 \frac{T}{𝑥_𝑟 − 𝑥_𝑙}$$
+
+4. triangulation(to find Depth map)
+
+## 7.2 Cues to Depth
+
+- Oculomotor（眼球运动）
+  - **Accommodation**: The shape of the lens in the eye, or the depth of the image plane in a camera, is related to the depth of objects that will be in focus. Hence, knowledge of these values provides information about the depth of the object being observed.
+  - **Convergence**: The rotation of eyes/cameras in a stereo vision system can vary to fixate objects at different depths. Hence, the angle of convergence provides information about the depth of the object being fixated.
+- Monocular (单目视觉)
+  - **Interposition**: Nearer objects may occlude more distant objects. Hence occlusion (or interposition) provides information about relative depth. 
+  - **Size familiarity**: Objects of known size provide depth information, since the smaller the image of the object the greater its depth. 
+  - **Texture gradients**: For uniformly textured surfaces, the texture elements get smaller and more closely spaced with increasing depth. 
+  - **Linear perspective**: lines that are parallel in the scene converge towards a vanishing point in the image. As the distance between the lines in the image decreases, so depth increases. 
+  - **Aerial perspective**: Due to the scattering of light by particles in the atmosphere, distant objects look fuzzier and have lower luminance contrast and colour saturation. 
+  - **Shading**: The distribution of light and shadow on objects provides a cue for depth.
+- Motion
+  - **Motion parallax**: As the camera move sideways, objects closer than the fixation point appear to move in a direction opposite to the camera, while objects further away appear to move in the same direction. The speed of movement increases with distance from the fixation point. 
+  - **Optic Flow**: As a camera moves forward or backward, objects closer to the camera move more quickly across the image plane. 
+  - **Accretion and deletion**: As a camera moves parts of an object can appear or disappear; these changes in occlusion provides information about relative depth. 
+  - **Structure from motion (kinetic depth)** : Movement of an object or of the camera can generate different views of an object that can be combined to recover 3D structure.
+
+# Week8 Video and Motion
+
+## 8.1 Optic flow & Motion flow
+
+Optic flow是利用图像序列中的像素在时间域上的变化、相邻帧之间的相关性来找到的上一帧跟当前帧间存在的对应关系，计算出相邻帧之间物体的运动信息的一种方法
+
+Motion flow则是真实世界中，物体在时间域上的变化、相邻帧之间的相关性
+
+为了找到Optic flow就必须找到两frame之间的对应点
+
+- Feature-based methods
+- Direct methods
+
+Constraints：
+
+- Small motion： (assume optical flow vectors have small magnitude). Fails if relative motion is fast or frame rate is slow
+- Spatial coherence：(assume neighbouring points have similar optical flow). Fails at discontinuities between surfaces at different depths, or surfaces with different motion
+
+找到了对应点就可以计算3d结构与恢复motion:
+
+- with knowledge of ego-motion: calculate absolute depth
+- Without knowledge of ego-motion:
+  - calculate relative depths
+  - Time-to-collision：how long the camera will collapse with object
+  - direction of ego-motion
+  - heading of ego-motion
+
+## 8.2 Aperture problem
+
+孔径问题指无法通过单个算子【计算某个像素值变化的操作，例如：梯度】准确无误地评估物体的运行轨迹。原因是每一个算子只能处理它所负责局部区域的像素值变化，然而同一种像素值变化可能是由物体的多种运行轨迹导致。
+
+<img src="/Users/kevin/Library/Application Support/typora-user-images/image-20220104041958551.png" alt="image-20220104041958551" style="zoom:40%;" />
+
+解决方案：
+
+- integrating information from many local motion detectors / image patches, or 
+-  by giving preference to image locations where image structure provides unambiguous information about optic flow (e.g. corners).
+
+# Week9 High-Level Vision (Artificial)
+
+## 9.1 Category hierarchy
+
+上层更抽象，下层更具体
+
+## 9.2 Template Matching
+
+Template：要被recognized的物体
+
+- 搜索每一块区域
+- 计算template与image region的相似度
+- 选取超过阈值的最佳区域
+
+Templates 需要与目标物体非常相似才能检测出来，如果物体发生了形变，旋转，就无法检测
+
+解决方案：multi templates for each object
+
+问题：遮挡无法检测，not robust to changes in appearance
+
+## 9.3 Similarity Measures
+
+We can **maximise** the following measures
+
+- Cross-correlation
+- Normalised cross-correlation （cosine of the angle between i and j）
+- Correlation coefficient
+
+We can **minimise** the following measures
+
+- Sum of Squared Differences:
+- Eculidean distance:
+- Sum of Absolute Differences: 
+
+## 9.4 Sliding Window
+
+对于每一块image patch用分类器检测是否包含物体（就不用比较intensity values）
+
+先用image segmentation处理后，会提高速度
+
+## 9.5 Edge Matching
+
+像template matching一样，只不过先提取边缘
+
+## 9.6 Model-based object recognition
+
+先假设出物体的形状与姿态，然后在图像中描绘出物体，再比较
+
+## 9.7 Intensity histograms
+
+compare histograms to find closes match
+
+Insensitive to small viewpoint changes and spatial configuration
+
+## 9.8 Implicit Shape Model (ISM)
+
+<img src="/Users/kevin/Library/Application Support/typora-user-images/image-20220104000215498.png" alt="image-20220104000215498" style="zoom:30%;" />
+
+## 9.9 Feature-based object recognition
+
+先提取SIFT特征
+
+## 9.10 Bag-of-words
+
+<img src="/Users/kevin/Library/Application Support/typora-user-images/image-20220104000621660.png" alt="image-20220104000621660" style="zoom:30%;" />
+
+## 9.11 Geometry Invariants
+
+# Week10 High-Level Vision (Biological)
+
+## 10.1 Theories of Object Recognition
+
+### 10.1.1 Object based：Recognition by Components
+
+主要思路：每个object都用一个3D模型表示，小的geometric components组成了大的整体
+
+structural descriptions：用来表示一个物体的组成部分与内部关系，比如the cube above cylinder
+
+geometrical icons / geons：3D物体，比如cube，sphere，cylinder，wedges，不同的geons组合可以代表不同的obj
+
+使用geons可以达成viewpoint invariance的目的，因为different views of the same obj are represented by the same set of goons, in the same arrangement.
+
+Problems:
+
+- 很难将一幅图片decompose成很多的components
+- 有很多自然物体很难用geons表示出来，比如树
+- 无法表示细节特征，或者无法区分微小的物体
+
+### 10.1.2 Image based
+
+3D obj represented by multiple 2D views of the obj
+
+Local(Featural) VS Global(Configural)
+
+Rules VS Prototypes VS Exemplars
+
+- Rules: 所有满足抽象的规则的事物属于一类。比如四条腿会叫的生物：狗；有三条边：三角形；
+- Prototypes：计算所有类别的中个体的平均值，新物体与每个类别平均值比较，看属于哪个最近的类别
+- Exemplars：每个类别个体用向量表示后保存下来，新物体与每个类别的个体比较，看属于哪个最近的类别
+
+Nearest Mean Classifier（Prototypes）
+
+Nearest/K-Nearest Neighbors Classifier（Exemplars）->无法处理outliers（noise）
+
+## 10.2 The Cortical Visual System
+
+### 10.2.1 Pathways
+
+"What" and "Where" pathways: 沿着pathways走，neurons preferred stimuli gets more **complex**, receptive fields become **larger**, and there is greater **invariance** to location, sensitivity to stimulus location **decreased**.
+
+### 10.2.2 HMAX
+
+Hierarchical Maxpooling Model:
+
+- S-cells(Simple)：sum（and）
+- C-cells(Complex)：max（or）
+
+在CNN中卷积层相当于HMAX中的S-cells；池化层相当于HMAX中的C-cells
+
+- **Simple cell**: input is from a number of centre-surround cells which have RFs on a common line. These centre-surround neurons are activated by a bar/edge at the correct orientation, resulting in the simple cell responding to a oriented bar/edge at a specific orientation. 
+- **Complex cell**: input is from a number of simple cells with the same orientation preference within a small spatial region. A bar/edge at the correct orientation and location to activate one of these simple cells will result in the complex cell responding, and hence, the complex cell responds to to oriented edges with some tolerance to exact location.
+
+## 10.3 Bayesian Inference
+
+<img src="/Users/kevin/Library/Application Support/typora-user-images/image-20220103230840505.png" alt="image-20220103230840505" style="zoom:50%;" />
